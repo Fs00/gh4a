@@ -55,7 +55,7 @@ import com.gh4a.ServiceFactory;
 import com.gh4a.fragment.CommitCompareFragment;
 import com.gh4a.fragment.ConfirmationDialogFragment;
 import com.gh4a.fragment.PullRequestFilesFragment;
-import com.gh4a.fragment.PullRequestConversationFragment;
+import com.gh4a.fragment.PullRequestFragment;
 import com.gh4a.utils.ApiHelpers;
 import com.gh4a.utils.IntentUtils;
 import com.gh4a.utils.RxUtils;
@@ -118,7 +118,7 @@ public class PullRequestActivity extends BaseFragmentPagerActivity implements
 
     private Issue mIssue;
     private PullRequest mPullRequest;
-    private PullRequestConversationFragment mConversationFragment;
+    private PullRequestFragment mPullRequestFragment;
     private IssueStateTrackingFloatingActionButton mEditFab;
     private Review mPendingReview;
     private boolean mPendingReviewLoaded;
@@ -129,8 +129,8 @@ public class PullRequestActivity extends BaseFragmentPagerActivity implements
     private final ActivityResultLauncher<Intent> mCreateReviewLauncher = registerForActivityResult(
             new ActivityResultContracts.StartActivityForResult(),
             new ActivityResultHelpers.ActivityResultSuccessCallback(() -> {
-                if (mConversationFragment != null) {
-                    mConversationFragment.reloadEvents(false);
+                if (mPullRequestFragment != null) {
+                    mPullRequestFragment.reloadEvents(false);
                 }
                 loadPendingReview(true);
             })
@@ -295,16 +295,16 @@ public class PullRequestActivity extends BaseFragmentPagerActivity implements
 
     @Override
     protected Fragment makeFragment(int position) {
-        if (position == PAGE_COMMITS) {
+        if (position == 1) {
             PullRequestMarker base = mPullRequest.base();
             PullRequestMarker head = mPullRequest.head();
             return CommitCompareFragment.newInstance(mRepoOwner, mRepoName, mPullRequestNumber,
                     base.label(), base.sha(), head.label(), head.sha());
-        } else if (position == PAGE_FILES) {
+        } else if (position == 2) {
             return PullRequestFilesFragment.newInstance(mRepoOwner, mRepoName,
                     mPullRequestNumber, mPullRequest.head().sha());
         } else {
-            Fragment f = PullRequestConversationFragment.newInstance(mPullRequest,
+            Fragment f = PullRequestFragment.newInstance(mPullRequest,
                     mIssue, mIsCollaborator, mInitialComment);
             mInitialComment = null;
             return f;
@@ -313,15 +313,15 @@ public class PullRequestActivity extends BaseFragmentPagerActivity implements
 
     @Override
     protected void onFragmentInstantiated(Fragment f, int position) {
-        if (position == PAGE_CONVERSATION) {
-            mConversationFragment = (PullRequestConversationFragment) f;
+        if (position == 0) {
+            mPullRequestFragment = (PullRequestFragment) f;
         }
     }
 
     @Override
     protected void onFragmentDestroyed(Fragment f) {
-        if (f == mConversationFragment) {
-            mConversationFragment = null;
+        if (f == mPullRequestFragment) {
+            mPullRequestFragment = null;
         }
     }
 
@@ -337,8 +337,8 @@ public class PullRequestActivity extends BaseFragmentPagerActivity implements
 
     @Override
     public void onCommentsUpdated() {
-        if (mConversationFragment != null) {
-            mConversationFragment.reloadEvents(true);
+        if (mPullRequestFragment != null) {
+            mPullRequestFragment.reloadEvents(true);
         }
     }
 
@@ -433,8 +433,8 @@ public class PullRequestActivity extends BaseFragmentPagerActivity implements
     }
 
     private void handlePullRequestUpdate() {
-        if (mConversationFragment != null) {
-            mConversationFragment.updateState(mPullRequest);
+        if (mPullRequestFragment != null) {
+            mPullRequestFragment.updateState(mPullRequest);
         }
         if (mIssue != null) {
             Issue.Builder builder = mIssue.toBuilder().state(mPullRequest.state());
@@ -527,8 +527,11 @@ public class PullRequestActivity extends BaseFragmentPagerActivity implements
         PullRequestReviewService service = ServiceFactory.get(PullRequestReviewService.class, force);
 
         ApiHelpers.PageIterator
-                .first(page -> service.getReviews(mRepoOwner, mRepoName, mPullRequestNumber, page),
-                        r -> r.state() == ReviewState.Pending && ApiHelpers.loginEquals(r.user(), ownLogin))
+                .toSingle(page -> service.getReviews(mRepoOwner, mRepoName, mPullRequestNumber, page))
+                .compose(RxUtils.filterAndMapToFirst(r -> {
+                    return r.state() == ReviewState.Pending
+                            && ApiHelpers.loginEquals(r.user(), ownLogin);
+                }))
                 .compose(makeLoaderSingle(1, force))
                 .doOnSubscribe(disposable -> {
                     mPendingReviewLoaded = false;
@@ -613,14 +616,5 @@ public class PullRequestActivity extends BaseFragmentPagerActivity implements
                     .setNegativeButton(getString(R.string.cancel), null)
                     .create();
         }
-    }
-
-    @Nullable
-    @Override
-    protected Uri getActivityUri() {
-        return IntentUtils.createBaseUriForRepo(mRepoOwner, mRepoName)
-                .appendPath("pull")
-                .appendPath(String.valueOf(mPullRequestNumber))
-                .build();
     }
 }
