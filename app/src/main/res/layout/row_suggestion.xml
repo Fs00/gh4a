@@ -8,7 +8,5 @@
     android:gravity="center_vertical"
     android:minHeight="?attr/listPreferredItemHeightSmall"
     android:padding="8dp"
-    android:textAppearance="?android:attr/textAppearanceMedium"
-    android:textColor="?android:textColorPrimary"
-    android:ellipsize="middle"
+    android:textAppearance="?attr/textAppearanceSearchResultTitle"
     tools:text="some suggestion" />

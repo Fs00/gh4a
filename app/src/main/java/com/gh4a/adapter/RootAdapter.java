@@ -272,10 +272,6 @@ public abstract class RootAdapter<T, VH extends RecyclerView.ViewHolder>
         return mFilter;
     }
 
-    public boolean hasDividers() {
-        return true;
-    }
-
     public boolean isCardStyle() {
         return false;
     }
