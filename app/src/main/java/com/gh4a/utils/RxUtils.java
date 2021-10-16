@@ -86,7 +86,7 @@ public class RxUtils {
     }
 
     public static <T> Single<T> doInBackground(Single<T> upstream) {
-        return upstream.subscribeOn(Schedulers.io())
+        return upstream.subscribeOn(Schedulers.newThread())
                 .observeOn(AndroidSchedulers.mainThread());
     }
 
