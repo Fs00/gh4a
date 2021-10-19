@@ -29,16 +29,14 @@ public class CreateReviewActivity extends AppCompatActivity implements
     private static final String EXTRA_OWNER = "owner";
     private static final String EXTRA_REPO = "repo";
     private static final String EXTRA_PR_NUMBER = "pr_number";
-    private static final String EXTRA_DRAFT_PR = "draft_pr";
     private static final String EXTRA_PENDING_REVIEW = "pending_review";
 
     protected static Intent makeIntent(Context context, String repoOwner, String repoName,
-            int pullRequestNumber, boolean isDraftPR, Review pendingReview) {
+            int pullRequestNumber, Review pendingReview) {
         return new Intent(context, CreateReviewActivity.class)
                 .putExtra(EXTRA_OWNER, repoOwner)
                 .putExtra(EXTRA_REPO, repoName)
                 .putExtra(EXTRA_PR_NUMBER, pullRequestNumber)
-                .putExtra(EXTRA_DRAFT_PR, isDraftPR)
                 .putExtra(EXTRA_PENDING_REVIEW, pendingReview);
     }
 
@@ -71,10 +69,6 @@ public class CreateReviewActivity extends AppCompatActivity implements
         View header = getLayoutInflater().inflate(R.layout.create_review_header, null);
         mEditorSheet.addHeaderView(header);
         mEditorSheet.setAllowEmpty(true);
-        boolean isDraftPR = extras.getBoolean(EXTRA_DRAFT_PR);
-        if (isDraftPR) {
-            mEditorSheet.setHighlightColor(R.attr.colorPullRequestDraft);
-        }
 
         mReviewEventAdapter = new ArrayAdapter<>(this, R.layout.spinner_item);
         mReviewEventAdapter.add(new ReviewEventDesc(R.string.pull_request_review_event_comment,

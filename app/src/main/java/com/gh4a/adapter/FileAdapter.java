@@ -65,11 +65,6 @@ public class FileAdapter extends RootAdapter<Content, FileAdapter.ViewHolder> {
         }
     }
 
-    @Override
-    public boolean hasDividers() {
-        return false;
-    }
-
     private int getIconId(ContentType type, String fileName) {
         if (mSubModuleNames != null && mSubModuleNames.contains(fileName)) {
             return R.drawable.submodule;

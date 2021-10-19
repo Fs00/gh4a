@@ -21,7 +21,6 @@ public abstract class UrlLoadTask extends AsyncTask<Void, Void, Optional<Intent>
     protected final FragmentActivity mActivity;
     private ProgressDialogFragment mProgressDialog;
     private int mIntentFlags;
-    private Runnable completionCallback;
 
     public UrlLoadTask(FragmentActivity activity) {
         super();
@@ -30,13 +29,6 @@ public abstract class UrlLoadTask extends AsyncTask<Void, Void, Optional<Intent>
 
     public void setIntentFlags(int flags) {
         mIntentFlags = flags;
-    }
-
-    /**
-     * Must be called BEFORE executing the task, otherwise the callback might not get executed.
-     */
-    public void setCompletionCallback(Runnable callback) {
-        completionCallback = callback;
     }
 
     @Override
@@ -71,10 +63,7 @@ public abstract class UrlLoadTask extends AsyncTask<Void, Void, Optional<Intent>
         if (mProgressDialog != null && mProgressDialog.isAdded()) {
             mProgressDialog.dismissAllowingStateLoss();
         }
-
-        if (completionCallback != null) {
-            completionCallback.run();
-        }
+        mActivity.finish();
     }
 
     protected abstract Single<Optional<Intent>> getSingle();

@@ -244,7 +244,7 @@ public class SearchFragment extends PagedDataBaseFragment<Object> implements
                 }.start();
             } else {
                 mQuery = cursor.getString(1);
-                mSearch.setQuery(mQuery, true);
+                mSearch.setQuery(mQuery, false);
             }
         }
         return true;
@@ -403,7 +403,7 @@ public class SearchFragment extends PagedDataBaseFragment<Object> implements
         }
     }
 
-    private class SuggestionAdapter extends CursorAdapter {
+    private static class SuggestionAdapter extends CursorAdapter {
         private final LayoutInflater mInflater;
 
         public SuggestionAdapter(Context context) {
@@ -443,27 +443,9 @@ public class SearchFragment extends PagedDataBaseFragment<Object> implements
 
         @Override
         public void bindView(View view, Context context, Cursor cursor) {
-            int columnIndex = cursor.getColumnIndexOrThrow(SuggestionsProvider.Columns.SUGGESTION);
-            String suggestionText = cursor.getString(columnIndex);
-            if (isClearRow(cursor.getPosition())) {
-                bindClearSuggestionsRow(view, suggestionText);
-            } else {
-                bindSuggestionRow(view, suggestionText);
-            }
-        }
-
-        private void bindSuggestionRow(View view, String suggestionText) {
-            TextView textView = (TextView) view.findViewById(R.id.suggestion_text);
-            textView.setText(suggestionText);
-            view.findViewById(R.id.select_suggestion_button).setOnClickListener(btn -> {
-                mQuery = suggestionText;
-                mSearch.setQuery(mQuery, false);
-            });
-        }
-
-        private void bindClearSuggestionsRow(View view, String suggestionText) {
             TextView textView = (TextView) view;
-            textView.setText(suggestionText);
+            int columnIndex = cursor.getColumnIndexOrThrow(SuggestionsProvider.Columns.SUGGESTION);
+            textView.setText(cursor.getString(columnIndex));
         }
 
         private boolean isClearRow(int position) {

@@ -49,8 +49,6 @@ import com.meisolsson.githubsdk.model.request.RequestMarkdown;
 import com.meisolsson.githubsdk.service.misc.MarkdownService;
 import com.meisolsson.githubsdk.service.repositories.RepositoryReleaseService;
 
-import java.util.Date;
-
 import io.reactivex.Single;
 import io.reactivex.disposables.Disposable;
 
@@ -73,6 +71,7 @@ public class ReleaseInfoActivity extends BaseActivity implements
     }
 
     private static final int ID_LOADER_RELEASE = 0;
+    private static final int ID_LOADER_BODY = 1;
 
     private String mRepoOwner;
     private String mRepoName;
@@ -185,6 +184,7 @@ public class ReleaseInfoActivity extends BaseActivity implements
             name = mRelease.tagName();
         }
         getSupportActionBar().setTitle(name);
+        loadBody();
         fillData();
     }
 
@@ -194,10 +194,9 @@ public class ReleaseInfoActivity extends BaseActivity implements
         gravatar.setOnClickListener(this);
 
         StyleableTextView details = findViewById(R.id.tv_releaseinfo);
-        Date releaseDateToShow = mRelease.publishedAt() != null ? mRelease.publishedAt() : mRelease.createdAt();
         String detailsText = getString(R.string.release_details,
                 ApiHelpers.getUserLogin(this, mRelease.author()),
-                StringUtils.formatRelativeTime(this, releaseDateToShow, true));
+                StringUtils.formatRelativeTime(this, mRelease.createdAt(), true));
         StringUtils.applyBoldTagsAndSetText(details, detailsText);
 
         TextView releaseType = findViewById(R.id.tv_releasetype);
@@ -213,13 +212,6 @@ public class ReleaseInfoActivity extends BaseActivity implements
         tag.setText(getString(R.string.release_tag, mRelease.tagName()));
         tag.setOnClickListener(this);
 
-        TextView body = findViewById(R.id.tv_release_notes);
-        if (!TextUtils.isEmpty(mRelease.bodyHtml())) {
-            mImageGetter.bind(body, mRelease.bodyHtml(), mRelease.id());
-        } else {
-            body.setText(R.string.release_no_releasenotes);
-        }
-
         if (mRelease.assets() != null && !mRelease.assets().isEmpty()) {
             RecyclerView downloadsList = findViewById(R.id.download_list);
             ReleaseAssetAdapter adapter = new ReleaseAssetAdapter(this);
@@ -231,6 +223,19 @@ public class ReleaseInfoActivity extends BaseActivity implements
         } else {
             findViewById(R.id.downloads).setVisibility(View.GONE);
         }
+    }
+
+    private void fillNotes(Optional<String> bodyHtmlOpt) {
+        TextView body = findViewById(R.id.tv_release_notes);
+
+        if (bodyHtmlOpt.isPresent()) {
+            mImageGetter.bind(body, bodyHtmlOpt.get(), mRelease.id());
+        } else {
+            body.setText(R.string.release_no_releasenotes);
+        }
+
+        body.setVisibility(View.VISIBLE);
+        findViewById(R.id.pb_releasenotes).setVisibility(View.GONE);
     }
 
     @Override
@@ -268,5 +273,25 @@ public class ReleaseInfoActivity extends BaseActivity implements
                     handleReleaseReady();
                     setContentShown(true);
                 }, this::handleLoadFailure);
+    }
+
+    private void loadBody() {
+        final Single<Optional<String>> htmlSingle;
+        if (TextUtils.isEmpty(mRelease.body())) {
+            htmlSingle = Single.just(Optional.absent());
+        } else {
+            MarkdownService service = ServiceFactory.get(MarkdownService.class, false);
+            RequestMarkdown request = RequestMarkdown.builder()
+                    .context(mRepoOwner + "/" + mRepoName)
+                    .mode("gfm")
+                    .text(mRelease.body())
+                    .build();
+            htmlSingle = service.renderMarkdown(request)
+                    .map(ApiHelpers::throwOnFailure)
+                    .map(Optional::of);
+        }
+        mBodySubscription = htmlSingle
+                .compose(makeLoaderSingle(ID_LOADER_BODY, false))
+                .subscribe(this::fillNotes, this::handleLoadFailure);
     }
 }

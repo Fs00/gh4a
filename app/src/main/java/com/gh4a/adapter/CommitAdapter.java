@@ -83,7 +83,7 @@ public class CommitAdapter extends RootAdapter<Commit, CommitAdapter.ViewHolder>
 
         holder.tvExtra.setText(ApiHelpers.getAuthorName(mContext, commit));
         holder.tvTimestamp.setText(
-                StringUtils.formatRelativeTime(mContext, commit.commit().author().date(), true));
+                StringUtils.formatRelativeTime(mContext, commit.commit().author().date(), false));
     }
 
     @Override

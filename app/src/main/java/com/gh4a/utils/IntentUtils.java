@@ -101,9 +101,10 @@ public class IntentUtils {
                     .setDefaultColorSchemeParams(colorParams)
                     .build();
             i.intent.setPackage(pkg);
+            i.intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             i.launchUrl(activity, uri);
         } else {
-            launchBrowser(activity, uri);
+            launchBrowser(activity, uri, Intent.FLAG_ACTIVITY_NEW_TASK);
         }
     }
 
@@ -197,78 +198,32 @@ public class IntentUtils {
         return intent != null && intent.getBooleanExtra(EXTRA_NEW_TASK, false);
     }
 
-    public static boolean hasCompressedExtra(Intent intent, String key) {
-        return intent.hasExtra(key) || intent.hasExtra(compressedDataKey(key));
-    }
-
-    public static void removeCompressedExtra(Intent intent, String key) {
-        intent.removeExtra(key);
-        intent.removeExtra(compressedDataKey(key));
-    }
-
-    public static void putCompressedArrayListExtra(Intent intent, String key, ArrayList<?> list, int thresholdBytes) {
-        Parcel parcel = Parcel.obtain();
-        parcel.writeList(list);
-        byte[] compressedData = compressDataIfNeeded(parcel.marshall(), thresholdBytes);
-        parcel.recycle();
-
-        if (compressedData != null) {
-            intent.putExtra(compressedDataKey(key), compressedData);
-        } else {
-            intent.putExtra(key, list);
-        }
-    }
-
-    public static <T extends Parcelable> ArrayList<T> getCompressedArrayListExtra(Intent intent, String key) {
-        Bundle extras = intent.getExtras();
-        ArrayList<T> result = readCompressedDataIfPresent(extras, key, ((parcel, loader) -> parcel.readArrayList(loader)));
-        if (result == null) {
-            result = extras.getParcelableArrayList(key);
-        }
-        return result;
-    }
-
     public static void putParcelableToBundleCompressed(Bundle bundle,
             String key, Parcelable parcelable, int thresholdBytes) {
         Parcel parcel = Parcel.obtain();
         parcel.writeParcelable(parcelable, 0);
-        byte[] compressedData = compressDataIfNeeded(parcel.marshall(), thresholdBytes);
+        byte[] bytes = parcel.marshall();
         parcel.recycle();
 
-        if (compressedData != null) {
-            bundle.putByteArray(compressedDataKey(key), compressedData);
-        } else {
-            bundle.putParcelable(key, parcelable);
-        }
-    }
-
-    public static <T extends Parcelable> T readCompressedParcelableFromBundle(Bundle bundle, String key) {
-        T result = readCompressedDataIfPresent(bundle, key, ((parcel, loader) -> parcel.readParcelable(loader)));
-        if (result == null) {
-            result = bundle.getParcelable(key);
-        }
-        return result;
-    }
-
-    private static byte[] compressDataIfNeeded(byte[] dataToCompress, int thresholdBytes) {
-        byte[] compressedData = null;
-        if (dataToCompress.length > thresholdBytes) {
-            try (ByteArrayOutputStream baos = new ByteArrayOutputStream(dataToCompress.length);
-                 GZIPOutputStream gzos = new GZIPOutputStream(baos)) {
-                gzos.write(dataToCompress);
+        if (bytes.length > thresholdBytes) {
+            try (ByteArrayOutputStream baos = new ByteArrayOutputStream(bytes.length);
+                    GZIPOutputStream gzos = new GZIPOutputStream(baos)) {
+                gzos.write(bytes);
                 gzos.close();
-                compressedData = baos.toByteArray();
-            } catch (IOException ignored) {
+                bundle.putByteArray(key + "_compressed", baos.toByteArray());
+                return;
+            } catch (IOException e) {
+                // Fall back to storing uncompressed
             }
         }
-        return compressedData;
+        bundle.putParcelable(key, parcelable);
     }
 
-    private static <T> T readCompressedDataIfPresent(Bundle bundle, String key,
-            CompressedParcelReader<T> reader) {
+    public static <T> T readCompressedParcelableFromBundle(Bundle bundle, String key) {
         byte[] uncompressedData = null;
-        if (bundle.containsKey(compressedDataKey(key))) {
-            byte[] compressedData = bundle.getByteArray(compressedDataKey(key));
+
+        if (bundle.containsKey(key + "_compressed")) {
+            byte[] compressedData = bundle.getByteArray(key + "_compressed");
             try (ByteArrayInputStream bais = new ByteArrayInputStream(compressedData);
                     ByteArrayOutputStream baos = new ByteArrayOutputStream();
                     GZIPInputStream gzis = new GZIPInputStream(bais)) {
@@ -278,25 +233,21 @@ public class IntentUtils {
                     baos.write(buffer, 0, len);
                 }
                 uncompressedData = baos.toByteArray();
-            } catch (IOException ignored) {}
+            } catch (IOException e) {
+                uncompressedData = null;
+            }
         }
+
         if (uncompressedData != null) {
             Parcel parcel = Parcel.obtain();
             parcel.unmarshall(uncompressedData, 0, uncompressedData.length);
             parcel.setDataPosition(0);
-            T result = reader.readFromParcel(parcel, FileUtils.class.getClassLoader());
+            T result = parcel.readParcelable(FileUtils.class.getClassLoader());
             parcel.recycle();
             return result;
+        } else {
+            return bundle.getParcelable(key);
         }
-        return null;
-    }
-
-    private static String compressedDataKey(String key) {
-        return key + "_compressed";
-    }
-
-    private interface CompressedParcelReader<T> {
-        T readFromParcel(Parcel parcel, ClassLoader loader);
     }
 
     public static class InitialCommentMarker implements Parcelable {

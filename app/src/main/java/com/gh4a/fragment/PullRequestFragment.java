@@ -77,10 +77,9 @@ import java.util.Set;
 
 import io.reactivex.Observable;
 import io.reactivex.Single;
-import io.reactivex.schedulers.Schedulers;
 import retrofit2.Response;
 
-public class PullRequestConversationFragment extends IssueFragmentBase {
+public class PullRequestFragment extends IssueFragmentBase {
     private static final int ID_LOADER_STATUS = 1;
     private static final int ID_LOADER_HEAD_REF = 2;
 
@@ -88,9 +87,9 @@ public class PullRequestConversationFragment extends IssueFragmentBase {
     private GitReference mHeadReference;
     private boolean mHasLoadedHeadReference;
 
-    public static PullRequestConversationFragment newInstance(PullRequest pr, Issue issue,
+    public static PullRequestFragment newInstance(PullRequest pr, Issue issue,
             boolean isCollaborator, IntentUtils.InitialCommentMarker initialComment) {
-        PullRequestConversationFragment f = new PullRequestConversationFragment();
+        PullRequestFragment f = new PullRequestFragment();
 
         Repository repo = pr.base().repo();
         Bundle args = buildArgs(repo.owner().login(), repo.name(),
@@ -183,8 +182,6 @@ public class PullRequestConversationFragment extends IssueFragmentBase {
             setHighlightColors(R.attr.colorPullRequestMerged, R.attr.colorPullRequestMergedDark);
         } else if (mPullRequest.state() == IssueState.Closed) {
             setHighlightColors(R.attr.colorIssueClosed, R.attr.colorIssueClosedDark);
-        } else if (mPullRequest.draft()) {
-            setHighlightColors(R.attr.colorPullRequestDraft, R.attr.colorPullRequestDraftDark);
         } else {
             setHighlightColors(R.attr.colorIssueOpen, R.attr.colorIssueOpenDark);
         }
@@ -316,10 +313,10 @@ public class PullRequestConversationFragment extends IssueFragmentBase {
                 });
 
         return Single.zip(
-                issueCommentItemSingle.subscribeOn(Schedulers.io()),
-                eventItemSingle.subscribeOn(Schedulers.io()),
-                reviewTimelineSingle.subscribeOn(Schedulers.io()),
-                commitCommentWithoutReviewSingle.subscribeOn(Schedulers.io()),
+                issueCommentItemSingle,
+                eventItemSingle,
+                reviewTimelineSingle,
+                commitCommentWithoutReviewSingle,
                 (comments, events, reviewItems, commentsWithoutReview) -> {
             ArrayList<TimelineItem> result = new ArrayList<>();
             result.addAll(comments);

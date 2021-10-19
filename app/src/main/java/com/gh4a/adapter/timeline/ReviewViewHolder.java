@@ -20,7 +20,6 @@ import com.gh4a.R;
 import com.gh4a.activities.ReviewActivity;
 import com.gh4a.activities.UserActivity;
 import com.gh4a.model.TimelineItem;
-import com.gh4a.utils.ApiHelpers;
 import com.gh4a.utils.AvatarHandler;
 import com.gh4a.utils.HttpImageGetter;
 import com.gh4a.utils.IntentUtils;
@@ -213,7 +212,7 @@ class ReviewViewHolder
         switch (review.state()) {
             case Approved: return R.drawable.timeline_event_approved;
             case ChangesRequested: return R.drawable.timeline_event_requested_changes;
-            default: return R.drawable.timeline_event_review;
+            default: return R.drawable.timeline_event_reviewed;
         }
     }
 
@@ -236,7 +235,7 @@ class ReviewViewHolder
                 break;
         }
 
-        String login = ApiHelpers.getUserLogin(mContext, review.user());
+        String login = review.user().login();
         String textBase = mContext.getString(textResId, login);
         SpannableStringBuilder text = StringUtils.applyBoldTags(textBase,
                 mMessageView.getTypefaceValue());

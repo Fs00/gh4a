@@ -84,8 +84,7 @@ public abstract class IssueFragmentBase extends ListDataBaseFragment<TimelineIte
             IssueEventType.Labeled, IssueEventType.Unlabeled, IssueEventType.Locked,
             IssueEventType.Unlocked, IssueEventType.Milestoned, IssueEventType.Demilestoned,
             IssueEventType.Renamed, IssueEventType.HeadRefDeleted, IssueEventType.HeadRefRestored,
-            IssueEventType.ReviewRequested, IssueEventType.ReviewRequestRemoved,
-            IssueEventType.ConvertToDraft, IssueEventType.ReadyForReview
+            IssueEventType.ReviewRequested, IssueEventType.ReviewRequestRemoved
     );
 
     protected View mListHeaderView;
